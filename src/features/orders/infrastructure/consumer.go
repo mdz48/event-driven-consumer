@@ -4,25 +4,25 @@ import (
 	"encoding/json"
 	"event-driven-consumer/src/core"
 	"event-driven-consumer/src/features/orders/application"
-	// "event-driven-consumer/src/features/orders/domain"
 	"log"
 	"time"
-
-	// amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type OrderConsumer struct {
-	rabbitMQ           *core.RabbitMQConnection
+	rabbitMQ            *core.RabbitMQConnection
 	processOrderUseCase *application.ProcessOrderUseCase
+	wsManager           *core.WebSocketManager
 }
 
 func NewOrderConsumer(
 	rabbitMQ *core.RabbitMQConnection,
 	processOrderUseCase *application.ProcessOrderUseCase,
+	wsManager *core.WebSocketManager,
 ) *OrderConsumer {
 	return &OrderConsumer{
-		rabbitMQ:           rabbitMQ,
+		rabbitMQ:            rabbitMQ,
 		processOrderUseCase: processOrderUseCase,
+		wsManager:           wsManager,
 	}
 }
 
@@ -33,6 +33,13 @@ type OrderMessage struct {
 	Product  string `json:"product"`
 	Quantity int    `json:"quantity"`
 	Status   string `json:"status"`
+}
+
+// Estructura para notificaciones WebSocket
+type OrderNotification struct {
+	Type    string      `json:"type"`
+	Message string      `json:"message"`
+	Order   interface{} `json:"order"`
 }
 
 func (c *OrderConsumer) StartConsuming() error {
@@ -89,16 +96,52 @@ func (c *OrderConsumer) StartConsuming() error {
 			log.Printf("Orden #%d registrada en cocina con ID interno %d",
 				orderMsg.ID, kitchenOrder.ID)
 
+			// Notificar a los clientes WebSocket
+			notification := OrderNotification{
+				Type:    "NEW_ORDER",
+				Message: "Nueva orden recibida",
+				Order:   kitchenOrder,
+			}
+			notificationJson, _ := json.Marshal(notification)
+			c.wsManager.BroadcastMessage(notificationJson)
+
 			// Confirmar procesamiento exitoso
 			d.Ack(false)
 
 			// Simular inicio automático de procesamiento después de un tiempo
 			go func(orderID int) {
 				time.Sleep(2 * time.Second)
-				_, err := c.processOrderUseCase.StartProcessing(orderID)
+				updatedOrder, err := c.processOrderUseCase.StartProcessing(orderID)
 				if err != nil {
 					log.Printf("Error al iniciar procesamiento de orden #%d: %s", orderID, err)
+					return
 				}
+
+				// Notificar cambio de estado
+				statusNotification := OrderNotification{
+					Type:    "STATUS_CHANGED",
+					Message: "Orden en procesamiento",
+					Order:   updatedOrder,
+				}
+				statusJson, _ := json.Marshal(statusNotification)
+				c.wsManager.BroadcastMessage(statusJson)
+
+				// Simular finalización después de otro tiempo
+				time.Sleep(5 * time.Second)
+				completedOrder, err := c.processOrderUseCase.FinishProcessing(orderID)
+				if err != nil {
+					log.Printf("Error al finalizar orden #%d: %s", orderID, err)
+					return
+				}
+
+				// Notificar orden completada
+				completedNotification := OrderNotification{
+					Type:    "ORDER_COMPLETED",
+					Message: "Orden completada",
+					Order:   completedOrder,
+				}
+				completedJson, _ := json.Marshal(completedNotification)
+				c.wsManager.BroadcastMessage(completedJson)
 			}(kitchenOrder.ID)
 		}
 	}()
