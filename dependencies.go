@@ -34,10 +34,13 @@ func NewDependencies() *Dependencies {
 
 	// Inicializar el publicador de mensajes (adaptador secundario)
 	messagePublisher := infrastructure.NewRabbitMQPublisher(rabbitMQ)
+	if err := messagePublisher.SetupExchangeAndQueue(); err != nil {
+		log.Fatal("Error al configurar RabbitMQ: ", err)
+	}
 
 	// Inicializar casos de uso (capa de aplicación)
 	getOrdersUseCase := usecases.NewGetOrdersUseCase(orderRepository)
-	updateOrderUseCase := usecases.NewUpdateOrderUseCase(orderRepository)
+	updateOrderUseCase := usecases.NewUpdateOrderUseCase(orderRepository, messagePublisher)
 	processOrderUseCase := usecases.NewProcessOrderUseCase(orderRepository, messagePublisher)
 
 	// Inicializar controladores (adaptadores primarios)
