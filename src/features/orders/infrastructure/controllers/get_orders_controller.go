@@ -1,15 +1,15 @@
 package controllers
 
 import (
-	"event-driven-consumer/src/features/orders/application"
+	"event-driven-consumer/src/features/orders/application/usecases"
 	"github.com/gin-gonic/gin"
 )
 
 type GetOrdersController struct {
-	GetOrdersUseCase *application.GetOrdersUseCase
+	GetOrdersUseCase *usecases.GetOrdersUseCase
 }
 
-func NewGetOrdersController(getOrdersUseCase *application.GetOrdersUseCase) *GetOrdersController {
+func NewGetOrdersController(getOrdersUseCase *usecases.GetOrdersUseCase) *GetOrdersController {
 	return &GetOrdersController{GetOrdersUseCase: getOrdersUseCase}
 }
 

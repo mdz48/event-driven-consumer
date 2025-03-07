@@ -1,4 +1,4 @@
-package application
+package usecases
 
 import "event-driven-consumer/src/features/orders/domain"
 
