@@ -23,7 +23,6 @@ func (p *RabbitMQPublisher) SetupExchangeAndQueue() error {
 		return nil
 	}
 
-	// Declarar el exchange
 	err := p.rabbitMQ.Channel.ExchangeDeclare(
 		"orders.events", 
 		"direct",        
@@ -37,7 +36,6 @@ func (p *RabbitMQPublisher) SetupExchangeAndQueue() error {
 		return err
 	}
 
-	// Declarar la cola
 	queue, err := p.rabbitMQ.DeclareQueue("orders.status_changed")
 	if err != nil {
 		return err

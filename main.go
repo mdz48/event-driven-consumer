@@ -11,5 +11,5 @@ func main() {
 	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	dependencies.engine.Use(cors.New(config))
-	_ = dependencies.Run()
+	dependencies.Run()
 }
